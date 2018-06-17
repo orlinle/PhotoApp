@@ -24,11 +24,11 @@ public class ImageServiceService extends Service {
     }
 
     public int onStartCommand(Intent intent, int flag, int startId) {
-        Toast.makeText(this, "Service starting...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Starting service...", Toast.LENGTH_SHORT).show();
         return START_STICKY;
     }
 
     public void onDestroy() {
-        Toast.makeText(this, "Service ending...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Ending service...", Toast.LENGTH_SHORT).show();
     }
 }

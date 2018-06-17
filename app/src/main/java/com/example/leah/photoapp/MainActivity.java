@@ -18,4 +18,9 @@ public class MainActivity extends AppCompatActivity {
         stopService(intent);
     }
 
+    public void startService(View view) {
+        Intent intent = new Intent(this, ImageServiceService.class);
+        startService(intent);
+    }
+
 }
