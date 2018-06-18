@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -86,6 +87,7 @@ public class ImageServiceService extends Service {
             try {
                 //sends the message to the server
                 OutputStream output = socket.getOutputStream();
+                OutputStreamWriter stringOutput = new OutputStreamWriter(output, "UTF-8");
                 File[] pics = dcim.listFiles();
                 int count = 0;
                 if (pics !=null) {
@@ -93,7 +95,15 @@ public class ImageServiceService extends Service {
                         FileInputStream fis = new FileInputStream(pic);
                         Bitmap bm = BitmapFactory.decodeStream(fis);
                         byte[] imgbyte =  getBytesFromBitmap(bm);
-                        output.write(imgbyte);
+                        //send image size
+                        int imgSize = imgbyte.length;
+                        stringOutput.write(String.valueOf(imgSize));
+                        //send image in bytes
+                        output.write(imgbyte, 0, imgSize);
+                        //send image name
+                        int index = pic.getName().lastIndexOf('\\');
+                        String imgName = pic.getName().substring(index+1);
+                        stringOutput.write(imgName);
                         output.flush();
                     }
                 }
