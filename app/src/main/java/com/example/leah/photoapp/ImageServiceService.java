@@ -44,6 +44,7 @@ public class ImageServiceService extends Service {
 
     public int onStartCommand(Intent intent, int flag, int startId) {
         Toast.makeText(this, "Starting service...", Toast.LENGTH_SHORT).show();
+
         return START_STICKY;
     }
 
@@ -52,14 +53,15 @@ public class ImageServiceService extends Service {
     }
 
     private void setFilter() {
+        Log.e("Service", "in setFilter");
         final IntentFilter theFilter = new IntentFilter();
         theFilter.addAction("android.net.wifi.supplicant.CONNECTION_CHANGE");
         theFilter.addAction("android.net.wifi.STATE_CHANGE");
         this.yourReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                WifiManager wifiManager = (WifiManager) context
-                        .getSystemService(Context.WIFI_SERVICE);
+                Log.e("Service", "setFilter: Invoked");
+                WifiManager wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
                 if (networkInfo!= null) {
                     if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
@@ -76,6 +78,7 @@ public class ImageServiceService extends Service {
     }
 
     private void startTransfer() {
+        Log.e("Service", "in startTransfer");
         try {
             File dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
             if (dcim == null) {
