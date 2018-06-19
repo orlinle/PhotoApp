@@ -13,6 +13,7 @@ import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -26,7 +27,7 @@ import java.net.Socket;
 
 public class ImageServiceService extends Service {
 
-    protected BroadcastReceiver yourReceiver;
+    private BroadcastReceiver yourReceiver;
 
     public ImageServiceService() { }
 
@@ -52,19 +53,24 @@ public class ImageServiceService extends Service {
     }
 
     private void setFilter() {
+        Log.e("setFilter","in set filter");
         final IntentFilter theFilter = new IntentFilter();
         theFilter.addAction("android.net.wifi.supplicant.CONNECTION_CHANGE");
         theFilter.addAction("android.net.wifi.STATE_CHANGE");
         this.yourReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                Log.e("receive","in onReceive");
                 WifiManager wifiManager = (WifiManager) context
                         .getSystemService(Context.WIFI_SERVICE);
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
                 if (networkInfo!= null) {
+                    Log.e("receive","network is not null");
                     if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                        Log.e("receive","network typ eis wifi");
                         //GET THE DIFFERENT NETWORK STATES
                         if (networkInfo.getState() == NetworkInfo.State.CONNECTED) {
+                            Log.e("receive","state is connected. gonna call start transfer");
                             startTransfer();    //start the transfer
                         }
                     }
@@ -73,48 +79,37 @@ public class ImageServiceService extends Service {
         };
         // registers the receiver so that your sevice will listen for broadcasts
         this.registerReceiver(this.yourReceiver,theFilter);
+        //LocalBroadcastManager.getInstance(getApplicationContext()).registerReceiver(this.yourReceiver,theFilter);
     }
 
     private void startTransfer() {
+        Log.e("startTransfer","in start transfer");
         try {
             File dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
             if (dcim == null) {
                 return;
             }
-            InetAddress serverAddr = InetAddress.getByName("10.0.2.2");
-            //create a socket to make the connection with the server
-            Socket socket = new Socket(serverAddr, 1234);
             try {
-                //sends the message to the server
-                OutputStream output = socket.getOutputStream();
-                OutputStreamWriter stringOutput = new OutputStreamWriter(output, "UTF-8");
                 File[] pics = dcim.listFiles();
-                int count = 0;
-                if (pics !=null) {
+                //final List<File> pics = new ArrayList<File>();
+                //recursively get pics with (dcim.getPath(), pics)
+                if (pics != null) {
+                    TcpClient client = TcpClient.GetInstance();
                     for (File pic : pics) {
                         FileInputStream fis = new FileInputStream(pic);
                         Bitmap bm = BitmapFactory.decodeStream(fis);
-                        byte[] imgbyte =  getBytesFromBitmap(bm);
-                        //send image size
+                        byte[] imgbyte = getBytesFromBitmap(bm);
                         int imgSize = imgbyte.length;
-                        stringOutput.write(String.valueOf(imgSize));
-                        //send image in bytes
-                        output.write(imgbyte, 0, imgSize);
-                        //send image name
                         int index = pic.getName().lastIndexOf('\\');
-                        String imgName = pic.getName().substring(index+1);
-                        stringOutput.write(imgName);
-                        output.flush();
+                        String imgName = pic.getName().substring(index + 1);
+                        client.SendImage(imgSize, imgbyte, imgName);
                     }
                 }
-
             } catch (Exception e) {
-                Log.e("TCP","S: Error",e);
-            } finally {
-                socket.close();
+                Log.e("file","Error", e);
             }
-        } catch (Exception e) {
-            Log.e("TCP","C: Error",e);
+        } catch (Exception e ) {
+            Log.e("DCIM","Error", e);
         }
     }
 
