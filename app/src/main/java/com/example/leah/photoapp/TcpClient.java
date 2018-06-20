@@ -2,9 +2,11 @@ package com.example.leah.photoapp;
 
 import android.util.Log;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -56,13 +58,19 @@ public class TcpClient {
                     //sends the message to the server
                     InetAddress serverAddr = InetAddress.getByName("10.0.2.2");
                     //create a socket to make the connection with the server
-                    socket = new Socket(serverAddr, 1234);
+                    socket = new Socket(serverAddr, 8200);
                     OutputStream output = socket.getOutputStream();
-                    OutputStreamWriter stringOutput = new OutputStreamWriter(output, "UTF-8");
-                    stringOutput.write(String.valueOf(size));
-                    output.write(imageBytes, 0, size);
-                    stringOutput.write(name);
-                    output.flush();
+                    DataOutputStream dataOutputStream = new DataOutputStream(output);
+                    //String s = String.valueOf(size);
+                    dataOutputStream.writeInt(Integer.reverseBytes(size));
+                    dataOutputStream.flush();
+                    dataOutputStream.write(imageBytes, 0, size);
+                    dataOutputStream.flush();
+                    dataOutputStream.writeInt(Integer.reverseBytes(name.length()));
+                    dataOutputStream.flush();
+                    byte[] nameByte = name.getBytes("UTF-8");
+                    dataOutputStream.write(nameByte, 0, name.length());
+                    dataOutputStream.flush();
                 } catch (Exception e) {
                     Log.e("TCP","sending: Error",e);
                 } finally {
