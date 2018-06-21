@@ -1,12 +1,7 @@
 package com.example.leah.photoapp;
-
 import android.util.Log;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.DataOutputStream;import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -17,11 +12,16 @@ public class TcpClient {
 
     private static final TcpClient instance = new TcpClient();
 
+    //private constructor for singleton class
     private TcpClient() {}
+    //public  method to get client instance
     public static TcpClient GetInstance() {
         return instance;
     }
 
+    /**
+     * open communication with server
+     */
     public void openCommunication() {
         Thread t = new Thread(){
             public void run() {
@@ -37,6 +37,9 @@ public class TcpClient {
         t.start();
     }
 
+    /**
+     * close communication with server
+     */
     public void closeCommunication() {
         Thread t = new Thread(){
             public void run() {
@@ -50,14 +53,18 @@ public class TcpClient {
         t.start();
     }
 
+    /**
+     * send image via socket
+     * @param size image size
+     * @param imageBytes image in byte array form
+     * @param name image name
+     */
     public void SendImage(final int size, final byte[] imageBytes, final String name) {
         Thread t = new Thread(){
             public void run() {
                 try {
-                    Log.e("client","in sendImage");
                     OutputStream output = socket.getOutputStream();
                     DataOutputStream dataOutputStream = new DataOutputStream(output);
-                    //String s = String.valueOf(size);
                     dataOutputStream.writeInt(Integer.reverseBytes(size));
                     dataOutputStream.flush();
                     dataOutputStream.write(imageBytes, 0, size);
