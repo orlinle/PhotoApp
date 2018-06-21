@@ -17,6 +17,8 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -53,12 +55,15 @@ public class ImageServiceService extends Service {
     }
 
     public int onStartCommand(Intent intent, int flag, int startId) {
-        Toast.makeText(this, "Starting service...", Toast.LENGTH_SHORT).show();
+
+        //Toast.makeText(this, "Starting service...", Toast.LENGTH_SHORT).show();
         return START_STICKY;
     }
 
     public void onDestroy() {
-        Toast.makeText(this, "Ending service...", Toast.LENGTH_SHORT).show();
+        Log.e("on destroy", "will make toast");
+        //Toast.makeText(this, "Ending service...", Toast.LENGTH_SHORT).show();
+        this.unregisterReceiver(yourReceiver);
     }
 
     private void setFilter() {
@@ -83,6 +88,7 @@ public class ImageServiceService extends Service {
                             startTransfer();    //start the transfer
                         }
                     }
+                    Log.e("on recei've", "finished");
                 }
             }
         };
@@ -98,47 +104,60 @@ public class ImageServiceService extends Service {
         if (dcim == null) {
             return;
         }
-        File camera = new File(dcim,"Camera");
+        File camera = new File(dcim, "Camera");
         try {
             final List<File> pics = new ArrayList<File>();
-            getPics(dcim.getPath(), pics);
+            getPics(dcim, pics);
             if (pics.size() == 0)
                 return;
-
-            if (pics != null) {
-                TcpClient client = TcpClient.GetInstance();
-                for (File pic : pics) {
-                    FileInputStream fis = new FileInputStream(pic);
-                    Bitmap bm = BitmapFactory.decodeStream(fis);
-                    byte[] imgbyte = getBytesFromBitmap(bm);
-                    int imgSize = imgbyte.length;
-                    int index = pic.getName().lastIndexOf('\\');
-                    String imgName = pic.getName().substring(index + 1);
-                    client.SendImage(imgSize, imgbyte, imgName);
-                }
+            TcpClient client = TcpClient.GetInstance();
+            client.openCommunication();
+            // progress bar
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "default");
+            int notify_id = 1;
+            builder.setSmallIcon(android.R.drawable.ic_menu_camera);
+            builder.setContentTitle("Picture Transfer").setContentText("Transfer in progress")
+                    .setPriority(NotificationCompat.PRIORITY_LOW);
+            int max = pics.size();
+            int progress = 0;
+            int i = 0;
+            for (File pic : pics) {
+                FileInputStream fis = new FileInputStream(pic);
+                Bitmap bm = BitmapFactory.decodeStream(fis);
+                byte[] imgbyte = getBytesFromBitmap(bm);
+                int imgSize = imgbyte.length;
+                int index = pic.getName().lastIndexOf('\\');
+                String imgName = pic.getName().substring(index + 1);
+                client.SendImage(imgSize, imgbyte, imgName);
+                //notify progress
+                Log.e("progress",String.valueOf(progress));
+                progress = Math.round((i / (float)max) * 100);
+                builder.setProgress(100, progress, false);
+                notificationManager.notify(notify_id, builder.build());
+                i++;
             }
+            builder.setContentText("Download complete").setProgress(0,0,false);
+            notificationManager.notify(notify_id, builder.build());
+            client.closeCommunication();
+            Log.e("on transfer", "finished");
+
         } catch (Exception e) {
             Log.e("file", "Error", e);
         }
+        return;
     }
 
-    private void getPics(String dir,List<File> files) {
+    private void getPics(File directory, List<File> files) {
         Log.e("P", "in getPics");
 
-        File directory = new File(dir);
-
         // Get all the files from a directory.
-        File[] fList = directory.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return true;
-            }
-        });
+        File[] fList = directory.listFiles();
         for (File file : fList) {
             if (file.isFile() && isImage(file.getName())) {
                 files.add(file);
             } else if (file.isDirectory()) {
-                getPics(file.getAbsolutePath(), files);
+                getPics(file, files);
             }
         }
     }
@@ -149,13 +168,12 @@ public class ImageServiceService extends Service {
         imageSuffixes.add(".png");
         imageSuffixes.add(".gif");
         imageSuffixes.add(".bmp");
-        for(String suffix : imageSuffixes) {
+        for (String suffix : imageSuffixes) {
             if (img.endsWith(suffix))
                 return true;
         }
         return false;
     }
-
 
 
     public byte[] getBytesFromBitmap(Bitmap bitmap) {
